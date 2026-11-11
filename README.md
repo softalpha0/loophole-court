@@ -73,6 +73,7 @@ cd loophole-court
 npm install
 cp .env.example .env.local   # add your ANTHROPIC_API_KEY
 npm run dev
+npm run smoke   # (second terminal) runs one real trial and prints every turn
 npm test        # 37 tests for the score, quote check, cheating filter, patches and court loop
 ```
 
