@@ -11,7 +11,9 @@ export type Loophole = {
   severity: Severity;
 };
 
-export type Patch = { loopholeId: string; patch: string; ruling: string; applied: boolean };
+/** "replace" swaps the quoted words; "append" adds a new line (for things the brief never mentions). */
+export type Placement = "replace" | "append";
+export type Patch = { loopholeId: string; patch: string; ruling: string; placement: Placement; applied: boolean };
 
 export type Round = {
   n: number;

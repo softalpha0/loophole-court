@@ -1,12 +1,12 @@
 import { isHarmless } from "./filter";
-import { applyPatches, isReasonablePatch } from "./patch";
+import { applyPatches } from "./patch";
 import { quoteIsInSource } from "./quote-check";
 import { airtightScore, isAirtight } from "./score";
-import type { Category, Loophole, Patch, Round, Severity } from "./types";
+import type { Category, Loophole, Patch, Placement, Round, Severity } from "./types";
 
 /** What the AI agents return before our code checks it. */
 export type RawLoophole = { quote: string; sillyReading: string; realQuestion: string; category: Category; severity: Severity };
-export type RawPatch = { loopholeId: string; patch: string; ruling: string };
+export type RawPatch = { loopholeId: string; patch: string; ruling: string; placement?: Placement };
 
 export type Agents = {
   lawyer: (brief: string, round: number, previous: Round[]) => Promise<RawLoophole[]>;
@@ -29,6 +29,13 @@ export type TrialResult = {
 
 const MAX_PER_ROUND = [8, 5, 5];
 
+/** A loophole must point at specific words, not most of the brief. */
+export function isFocusedQuote(quote: string, brief: string): boolean {
+  const q = quote.trim().length;
+  const b = brief.trim().length;
+  return q <= 200 && !(q > 40 && q > 0.6 * b);
+}
+
 export function questionKey(q: string): string {
   return q.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -43,7 +50,7 @@ export function cleanLoopholes(raw: RawLoophole[], brief: string, round: number,
   for (const l of raw) {
     if (kept.length >= (MAX_PER_ROUND[round - 1] ?? 5)) break;
     if (!l.quote?.trim() || !l.sillyReading?.trim() || !l.realQuestion?.trim()) continue;
-    if (!quoteIsInSource(l.quote, brief)) continue;
+    if (!quoteIsInSource(l.quote, brief) || !isFocusedQuote(l.quote, brief)) continue;
     if (!isHarmless(l.sillyReading) || !isHarmless(l.quote + " " + l.sillyReading)) continue;
     const key = questionKey(l.realQuestion);
     if (patchedQuestions.has(key) || thisRound.has(key)) continue;
@@ -84,7 +91,7 @@ export async function runTrial(
     const ordered = kept.map((l) => ({ loophole: l, raw: byId.get(l.id) }));
     const { text, applied } = applyPatches(
       current,
-      ordered.map((o) => ({ quote: o.loophole.quote, patch: o.raw && isReasonablePatch(o.loophole.quote, o.raw.patch) ? o.raw.patch : "" })),
+      ordered.map((o) => ({ quote: o.loophole.quote, patch: o.raw?.patch ?? "", placement: o.raw?.placement ?? "replace" })),
     );
     const patches: Patch[] = ordered
       .filter((o) => o.raw)
@@ -92,6 +99,7 @@ export async function runTrial(
         loopholeId: o.loophole.id,
         patch: o.raw!.patch.trim(),
         ruling: o.raw!.ruling.trim(),
+        placement: o.raw!.placement ?? "replace",
         applied: applied[kept.indexOf(o.loophole)],
       }));
     open = kept.filter((_, i) => !applied[i]);

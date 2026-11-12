@@ -86,3 +86,21 @@ describe("runTrial", () => {
     expect(r.rounds).toEqual([]);
   });
 });
+
+describe("quote focus", () => {
+  it("drops a loophole that quotes (almost) the whole brief", async () => {
+    const { isFocusedQuote } = await import("@/core/loop");
+    const brief = "English – Essay\nWrite about a famous person. Use sources. Due Friday.";
+    expect(isFocusedQuote("Write about a famous person. Use sources. Due Friday.", brief)).toBe(false);
+    expect(isFocusedQuote("Write about a famous person", brief)).toBe(true);
+    expect(isFocusedQuote("Essay", brief)).toBe(true);
+  });
+
+  it("lands append patches in the loop and reports their placement", async () => {
+    const lawyer = vi.fn<Agents["lawyer"]>().mockResolvedValueOnce([{ ...L("Write about"), category: "length" }]).mockResolvedValue([]);
+    const teacher: Agents["teacher"] = async (_b, ls) => [{ loopholeId: ls[0].id, patch: "Length: 800–1,000 words.", ruling: "Sustained.", placement: "append" }];
+    const r = await runTrial(BRIEF, { lawyer, teacher });
+    expect(r.finalBrief).toBe(`${BRIEF}\nLength: 800–1,000 words.`);
+    expect(r.rounds[0].patches[0]).toMatchObject({ placement: "append", applied: true });
+  });
+});

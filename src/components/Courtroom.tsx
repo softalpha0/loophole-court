@@ -225,7 +225,7 @@ function LoopholeCard({
               {patch.ruling}
             </p>
             <p className="mt-1 text-sm">
-              {patch.applied ? "New wording" : "Suggested wording"}: “{patch.patch}”
+              {!patch.applied ? "Suggested wording" : patch.placement === "append" ? "Added line" : "New wording"}: “{patch.patch}”
             </p>
           </div>
           <span aria-hidden className="mt-0.5 text-xl">👩‍🏫</span>

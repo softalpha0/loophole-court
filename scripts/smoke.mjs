@@ -38,11 +38,11 @@ for await (const chunk of res.body) {
     }
     if (e.type === "teacher") {
       console.log(`[${secs()}] 👩‍🏫 ${e.patches.filter((p) => p.applied).length}/${e.patches.length} patches landed, score ${e.score}`);
-      e.patches.forEach((p) => console.log(`   ${p.applied ? "✓" : "✗"} ${p.ruling}`));
+      e.patches.forEach((p) => console.log(`   ${p.applied ? "✓" : "✗"} ${p.ruling}  [${p.placement}: ${p.patch}]`));
     }
     if (e.type === "done") {
       ok = true;
-      console.log(`\n[${secs()}] ⚖️ Verdict: ${e.result.scoreBefore} → ${e.result.scoreAfter}\n   Patched brief: ${e.result.finalBrief}`);
+      console.log(`\n[${secs()}] ⚖️ Verdict: ${e.result.scoreBefore} → ${e.result.scoreAfter}\n   Patched brief:\n${e.result.finalBrief}`);
     }
     if (e.type === "error") console.log(`\n❌ ${e.message}`);
   }

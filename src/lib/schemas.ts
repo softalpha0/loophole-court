@@ -28,7 +28,12 @@ export const AiTeacherSchema = z.object({
   patches: z.array(
     z.object({
       loopholeId: z.string().describe("The loophole id, exactly as given"),
-      patch: z.string().describe("Replacement wording for exactly the quoted words: same task, now unambiguous"),
+      placement: z
+        .enum(["replace", "append"])
+        .describe('"replace" to reword the quoted words; "append" to add a new short line when the brief never mentions the topic (format, length, grading, solo/group…)'),
+      patch: z
+        .string()
+        .describe('For "replace": wording that replaces exactly the quoted words. For "append": one short labelled line, e.g. "Length: 800–1,000 words."'),
       ruling: z.string().describe("One short line in a teacher's voice, courtroom style, e.g. 'Objection sustained. 800–1,000 words.'"),
     }),
   ),

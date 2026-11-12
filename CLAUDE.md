@@ -34,3 +34,4 @@ Rules:
 - Commits: author softalpha0 <softonchain@gmail.com> only; Claude credited in README.
 - M5 courtroom: `src/components/Courtroom.tsx` (Bench with count-up score + speaking avatar, BriefPanel with numbered highlights from `src/core/highlight.ts`, RoundLog cards revealed one by one via CSS animation-delay; reduced motion turns animations off). Highlights are `<mark role="button">`, because real buttons can't wrap inline.
 - After the Lawyer rests, the brief panel keeps showing the last patched round (green highlights).
+- First real trial (Opus 5.5): 49 s, 3 rounds, 20 → 100, 0 filtered. Fixed after it: Teacher patches now have `placement` ("append" adds a labelled line for topics the brief never mentions, instead of stuffing the title); quotes covering >60% of the brief are dropped (`isFocusedQuote`); Teacher must not invent calendar dates.

@@ -6,7 +6,7 @@ You are the Student Lawyer in Loophole Court: a cheeky but good-hearted lawyer w
 ${SAFETY_RULES}
 
 For each loophole:
-- quote: copy the EXACT words from the brief (a short phrase or clause, verbatim). If you can't quote it, it isn't a loophole.
+- quote: copy the EXACT words from the brief, verbatim: a short phrase (ideally under 10 words), never the whole brief. If the brief says nothing about the topic (e.g. no word count, no mention of groups), quote the shortest relevant phrase, such as the task title or the main instruction. If you can't quote it, it isn't a loophole.
 - sillyReading: one funny, obviously absurd but technically-allowed reading, max 20 words, in the first person ("My cat. Very famous on our street.").
 - realQuestion: the genuine question a student should ask the teacher.
 - category: length · format · sources · scope · deadline · collaboration · grading · definitions.
@@ -14,7 +14,7 @@ For each loophole:
 - harmless: true only if the silly reading follows the hard rules.
 
 Look especially at: length, format, number/kind of sources, scope or topic limits, exact deadline and how to hand in, solo or group, how it's graded, and vague words ("discuss", "famous", "creative", "some").
-Round 1: up to 8 loopholes, most important first. Re-examination rounds: you get the PATCHED brief and the earlier rulings; report only loopholes that are new or still unresolved (max 5). If the brief is now clear, return an empty list — don't invent problems.
+Use each exact quote for at most two loopholes. Round 1: up to 8 loopholes, most important first. Re-examination rounds: you get the PATCHED brief and the earlier rulings; report only loopholes that are new or still unresolved (max 5). If the brief is now clear, return an empty list — don't invent problems.
 `.trim();
 
 export function lawyerPrompt(brief: string, round: number, rulings: string[]): string {

@@ -30,3 +30,24 @@ describe("applyPatches", () => {
     expect(applyPatches(brief, [{ quote: "Use sources", patch: "  " }]).applied).toEqual([false]);
   });
 });
+
+describe("append patches", () => {
+  it("adds a new line at the end instead of touching the quoted words", () => {
+    const r = applyPatches("English – Essay\nWrite about a famous person.", [
+      { quote: "English – Essay", patch: "Length: 800–1,000 words.", placement: "append" },
+      { quote: "English – Essay", patch: "Format: typed, double-spaced.", placement: "append" },
+    ]);
+    expect(r.text).toBe("English – Essay\nWrite about a famous person.\nLength: 800–1,000 words.\nFormat: typed, double-spaced.");
+    expect(r.applied).toEqual([true, true]);
+  });
+  it("mixes replace and append", () => {
+    const r = applyPatches(brief, [
+      { quote: "Use sources", patch: "Use at least 3 sources", placement: "replace" },
+      { quote: "Write about", patch: "Work alone.", placement: "append" },
+    ]);
+    expect(r.text).toBe("Write about a famous person. Use at least 3 sources. Due Friday.\nWork alone.");
+  });
+  it("rejects an over-long appended line", () => {
+    expect(isReasonablePatch("x", "y".repeat(300), "append")).toBe(false);
+  });
+});
