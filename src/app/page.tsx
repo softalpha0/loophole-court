@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { BriefInput, type BriefPayload } from "@/components/BriefInput";
-import { TeacherMessage } from "@/components/TeacherMessage";
+import { Verdict } from "@/components/Verdict";
 import { Bench, BriefPanel, RoundLog, type RoundView } from "@/components/Courtroom";
 import type { TrialResult } from "@/core/loop";
 import { streamTrial } from "@/lib/trialClient";
@@ -18,9 +18,7 @@ export default function Home() {
   const [waitingFor, setWaitingFor] = useState<"lawyer" | "teacher" | null>(null);
   const [score, setScore] = useState<number | null>(null);
   const [result, setResult] = useState<TrialResult | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const briefRef = useRef("");
   const abortRef = useRef<AbortController | null>(null);
@@ -72,9 +70,6 @@ export default function Home() {
               setWaitingFor(null);
               setResult(e.result);
               setScore(e.result.scoreAfter);
-              const qs = e.result.rounds.flatMap((r) => r.loopholes);
-              const majors = qs.filter((l) => l.severity === "major").slice(0, 4);
-              setSelected(new Set((majors.length ? majors : qs.slice(0, 2)).map((l) => l.id)));
               setPhase("verdict");
               break;
             }
@@ -99,7 +94,6 @@ export default function Home() {
     window.scrollTo({ top: 0 });
   }
 
-  const allLoopholes = result?.rounds.flatMap((r) => r.loopholes) ?? [];
 
   return (
     <main className={`mx-auto w-full px-4 pb-10 pt-8 sm:px-6 sm:pt-12 ${phase === "input" ? "max-w-2xl" : "max-w-5xl"}`}>
@@ -202,79 +196,7 @@ export default function Home() {
             </div>
           )}
 
-          {phase === "verdict" && result && (
-            <section aria-labelledby="verdict-h" className="mx-auto max-w-2xl space-y-4 pt-4">
-              <h2 id="verdict-h" className="text-2xl font-semibold">
-                ⚖️ Verdict
-              </h2>
-              <p className="text-muted">
-                {allLoopholes.length === 0
-                  ? "No loopholes found. This brief is already airtight."
-                  : `${allLoopholes.length} loophole${allLoopholes.length === 1 ? "" : "s"} found over ${result.rounds.length} round${result.rounds.length === 1 ? "" : "s"}. Airtight Score ${result.scoreBefore} → ${result.scoreAfter}.`}
-              </p>
-
-              {mode === "student" && allLoopholes.length > 0 && (
-                <>
-                  <fieldset className="space-y-2">
-                    <legend className="font-semibold">Questions to ask your teacher</legend>
-                    {allLoopholes.map((l) => (
-                      <label key={l.id} className={`flex cursor-pointer gap-3 rounded-2xl border bg-surface p-3 ${selected.has(l.id) ? "border-accent ring-1 ring-accent" : "border-line"}`}>
-                        <input
-                          type="checkbox"
-                          checked={selected.has(l.id)}
-                          onChange={() =>
-                            setSelected((s) => {
-                              const n = new Set(s);
-                              if (n.has(l.id)) n.delete(l.id);
-                              else n.add(l.id);
-                              return n;
-                            })
-                          }
-                          className="mt-1 h-5 w-5 shrink-0 accent-[var(--accent)]"
-                        />
-                        <span>
-                          {l.realQuestion}
-                          {l.severity === "major" && <span className="ml-2 rounded-full bg-must-soft px-2 py-0.5 text-xs font-medium text-must">Important</span>}
-                        </span>
-                      </label>
-                    ))}
-                  </fieldset>
-                  <TeacherMessage
-                    title={title}
-                    options={allLoopholes.map((l) => ({ id: l.id, question: l.realQuestion, quote: l.quote }))}
-                    selected={selected}
-                  />
-                </>
-              )}
-
-              {mode === "teacher" && (
-                <div className="space-y-3 rounded-3xl border border-line bg-surface p-5">
-                  <h3 className="text-lg font-semibold">Your patched brief</h3>
-                  <p className="whitespace-pre-wrap rounded-2xl bg-background p-4 leading-relaxed">{result.finalBrief}</p>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(result.finalBrief);
-                        setCopied(true);
-                        setTimeout(() => setCopied(false), 2000);
-                      } catch {
-                        setError("Couldn't copy automatically. Select the text and copy it yourself.");
-                      }
-                    }}
-                    className="w-full rounded-full bg-accent px-6 py-3 font-semibold text-white hover:bg-accent-strong"
-                  >
-                    {copied ? "Copied ✓" : "Copy patched brief"}
-                  </button>
-                  <p className="text-xs text-muted">Check the values (word counts, dates) match what you want before handing it out.</p>
-                </div>
-              )}
-
-              <button type="button" onClick={reset} className="w-full rounded-full border border-accent px-6 py-3 font-semibold text-accent hover:bg-accent-soft">
-                Start a new trial
-              </button>
-            </section>
-          )}
+          {phase === "verdict" && result && <Verdict result={result} title={title} mode={mode} onNew={reset} />}
         </div>
       )}
     </main>
