@@ -32,3 +32,5 @@ Rules:
 - `/api/trial` streams newline-delimited JSON events (start, title, lawyer, teacher, done, error); `maxDuration = 300`. Photos are transcribed first (vision), then the loop runs on the text.
 - Rate limits: 10 trials/hour/IP (`TRIALS_PER_HOUR`), 20 messages/10 min.
 - Commits: author softalpha0 <softonchain@gmail.com> only; Claude credited in README.
+- M5 courtroom: `src/components/Courtroom.tsx` (Bench with count-up score + speaking avatar, BriefPanel with numbered highlights from `src/core/highlight.ts`, RoundLog cards revealed one by one via CSS animation-delay; reduced motion turns animations off). Highlights are `<mark role="button">`, because real buttons can't wrap inline.
+- After the Lawyer rests, the brief panel keeps showing the last patched round (green highlights).

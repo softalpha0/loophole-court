@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { BriefInput, type BriefPayload } from "@/components/BriefInput";
 import { TeacherMessage } from "@/components/TeacherMessage";
-import { ScoreGauge, TrialView, type RoundView } from "@/components/Trial";
+import { Bench, BriefPanel, RoundLog, type RoundView } from "@/components/Courtroom";
 import type { TrialResult } from "@/core/loop";
 import { streamTrial } from "@/lib/trialClient";
 
@@ -21,6 +21,8 @@ export default function Home() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const briefRef = useRef("");
   const abortRef = useRef<AbortController | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
@@ -36,6 +38,8 @@ export default function Home() {
     setError(null);
     setWaitingFor("lawyer");
     setBrief(payload.text ?? "");
+    briefRef.current = payload.text ?? "";
+    setActiveId(null);
     requestAnimationFrame(() => topRef.current?.focus());
     try {
       await streamTrial(
@@ -44,18 +48,23 @@ export default function Home() {
           switch (e.type) {
             case "start":
               setBrief(e.brief);
+              briefRef.current = e.brief;
               setTitle(e.title);
               break;
             case "title":
               setTitle(e.title);
               break;
             case "lawyer":
-              setRounds((rs) => [...rs, { n: e.round, loopholes: e.loopholes, lawyerScore: e.score, dropped: e.dropped }]);
+              setRounds((rs) => [
+                ...rs,
+                { n: e.round, briefBefore: briefRef.current, loopholes: e.loopholes, lawyerScore: e.score, dropped: e.dropped },
+              ]);
               setScore((s) => (s === null ? e.score : s));
               setWaitingFor(e.loopholes.length ? "teacher" : null);
               break;
             case "teacher":
-              setRounds((rs) => rs.map((r) => (r.n === e.round ? { ...r, patches: e.patches, scoreAfter: e.score } : r)));
+              setRounds((rs) => rs.map((r) => (r.n === e.round ? { ...r, patches: e.patches, scoreAfter: e.score, briefAfter: e.briefAfter } : r)));
+              briefRef.current = e.briefAfter;
               setScore(e.score);
               setWaitingFor("lawyer");
               break;
@@ -93,7 +102,7 @@ export default function Home() {
   const allLoopholes = result?.rounds.flatMap((r) => r.loopholes) ?? [];
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 pb-10 pt-8 sm:px-6 sm:pt-12">
+    <main className={`mx-auto w-full px-4 pb-10 pt-8 sm:px-6 sm:pt-12 ${phase === "input" ? "max-w-2xl" : "max-w-5xl"}`}>
       <header className="mb-8 flex items-center justify-between">
         <button type="button" onClick={reset} className="flex items-center gap-2 text-left" aria-label="Loophole Court home">
           <span aria-hidden className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-lg text-white">
@@ -143,25 +152,46 @@ export default function Home() {
             <h2 className="text-2xl font-semibold leading-tight">{title}</h2>
           </div>
 
-          {score !== null && (
-            <div className="sticky top-2 z-10 rounded-2xl border border-line bg-surface/95 p-4 shadow-sm backdrop-blur">
-              <ScoreGauge score={score} />
-              {result && result.scoreBefore !== result.scoreAfter && (
-                <p className="mt-1 text-sm text-muted">
-                  From {result.scoreBefore} to {result.scoreAfter}
-                </p>
+          <Bench score={score} before={result?.scoreBefore} waitingFor={waitingFor} />
+
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start">
+            <div className="space-y-3 lg:sticky lg:top-40">
+              {(() => {
+                // Show the latest round with arguments; once the Lawyer rests, keep showing the last patched brief.
+                const withArgs = rounds.filter((r) => r.loopholes.length > 0);
+                const last = withArgs[withArgs.length - 1];
+                if (!last) return brief ? <BriefPanel text={brief} marks={[]} tone="loophole" activeId={null} onPick={() => {}} /> : null;
+                const patched = !!last.briefAfter;
+                const marks = patched
+                  ? (last.patches ?? [])
+                      .filter((p) => p.applied)
+                      .map((p) => ({ id: p.loopholeId, quote: p.patch, label: String(last.loopholes.findIndex((l) => l.id === p.loopholeId) + 1) }))
+                  : last.loopholes.map((l, i) => ({ id: l.id, quote: l.quote, label: String(i + 1) }));
+                return (
+                  <BriefPanel
+                    text={patched ? last.briefAfter! : last.briefBefore}
+                    marks={marks}
+                    tone={patched ? "patched" : "loophole"}
+                    activeId={activeId}
+                    onPick={(id) => {
+                      setActiveId(id);
+                      document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }}
+                  />
+                );
+              })()}
+              <p className="text-xs text-muted">Tap a highlight to jump to its argument. Hover or focus an argument to find it in the brief.</p>
+            </div>
+
+            <div className="space-y-6">
+              {rounds.map((r) => (
+                <RoundLog key={r.n} round={r} activeId={activeId} onActive={setActiveId} />
+              ))}
+              {rounds.length === 0 && !error && (
+                <p className="animate-pulse rounded-2xl border border-dashed border-line p-6 text-center text-muted">All rise. The court is now in session…</p>
               )}
             </div>
-          )}
-
-          {brief && (
-            <details className="rounded-2xl border border-line bg-surface/60 px-4 py-3" open={rounds.length === 0}>
-              <summary className="cursor-pointer text-sm font-medium">The brief on trial</summary>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{brief}</p>
-            </details>
-          )}
-
-          <TrialView rounds={rounds} waitingFor={waitingFor} />
+          </div>
 
           {error && (
             <div role="alert" className="space-y-3 rounded-2xl bg-must-soft px-4 py-3 text-must">
@@ -173,7 +203,7 @@ export default function Home() {
           )}
 
           {phase === "verdict" && result && (
-            <section aria-labelledby="verdict-h" className="space-y-4">
+            <section aria-labelledby="verdict-h" className="mx-auto max-w-2xl space-y-4 pt-4">
               <h2 id="verdict-h" className="text-2xl font-semibold">
                 ⚖️ Verdict
               </h2>
